@@ -1,10 +1,11 @@
 {% extends 'core/base.html' %}
+{% load tz %}
 {% block content %}
 <div class="container mt-5">
     <!-- Encabezado -->
     <div class="text-center mb-5">
         <h1 class="display-5 text-primary">Gestionar Disponibilidad</h1>
-        <p class="text-muted">Añade, visualiza o elimina tus horarios disponibles de forma sencilla.</p>
+        <p class="text-muted">Añade, modifica o elimina tus horarios disponibles de forma sencilla.</p>
     </div>
 
     <!-- Formulario para agregar disponibilidad -->
@@ -15,9 +16,15 @@
         <div class="card-body">
             <form method="post" action="">
                 {% csrf_token %}
-                <div class="mb-3">
-                    <label for="fecha_disponible" class="form-label">Fecha y Hora Disponible</label>
-                    <input type="datetime-local" id="fecha_disponible" name="fecha_disponible" class="form-control" required>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="id_fecha" class="form-label">Fecha</label>
+                        <input type="date" id="id_fecha" name="fecha" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="id_hora" class="form-label">Hora</label>
+                        <input type="time" id="id_hora" name="hora" class="form-control" required>
+                    </div>
                 </div>
                 <div class="text-center">
                     <button type="submit" class="btn btn-success btn-lg">➕ Agregar Horario</button>
@@ -31,18 +38,37 @@
         <div class="card-header bg-secondary text-white text-center">
             <h4>Horarios Disponibles</h4>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
             {% if disponibilidades.exists %}
                 <ul class="list-group list-group-flush">
                     {% for disponibilidad in disponibilidades %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span class="text-primary fw-bold">
-                                {{ disponibilidad.fecha_disponible|date:"d/m/Y H:i" }}
-                            </span>
-                            <form method="post" action="{% url 'eliminar_disponibilidad' disponibilidad.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-danger btn-sm">🗑️ Eliminar</button>
-                            </form>
+                            <div>
+                                <span class="text-primary fw-bold">
+                                    {% timezone "America/Santiago" %}
+                                        {{ disponibilidad.fecha_disponible|date:"d/m/Y H:i" }}
+                                    {% endtimezone %}
+                                </span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <!-- Botón Modificar -->
+                                <button 
+                                    type="button" 
+                                    class="btn btn-sm btn-warning" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modificarModal" 
+                                    data-id="{{ disponibilidad.id }}" 
+                                    data-fecha="{{ disponibilidad.fecha_disponible|date:'Y-m-d' }}" 
+                                    data-hora="{{ disponibilidad.fecha_disponible|time:'H:i' }}">
+                                    ✏️ Modificar
+                                </button>
+
+                                <!-- Botón Eliminar -->
+                                <form method="post" action="{% url 'eliminar_disponibilidad' disponibilidad.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Eliminar</button>
+                                </form>
+                            </div>
                         </li>
                     {% endfor %}
                 </ul>
@@ -52,9 +78,56 @@
         </div>
     </div>
 
+    <!-- Modal para Modificar Disponibilidad -->
+    <div class="modal fade" id="modificarModal" tabindex="-1" aria-labelledby="modificarModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="modificarModalLabel">Modificar Disponibilidad</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <form method="post" action="{% url 'modificar_disponibilidad' %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <input type="hidden" name="disponibilidad_id" id="modificar_id">
+                        <div class="mb-3">
+                            <label for="modificar_fecha" class="form-label">Fecha</label>
+                            <input type="date" id="modificar_fecha" name="fecha" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="modificar_hora" class="form-label">Hora</label>
+                            <input type="time" id="modificar_hora" name="hora" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Botón para regresar -->
     <div class="text-center mt-4">
         <a href="{% url 'medico_dashboard' %}" class="btn btn-secondary px-5 py-2">⬅️ Volver al Panel</a>
     </div>
 </div>
+
+<script>
+    // Script para cargar los datos en el modal de modificación
+    document.addEventListener('DOMContentLoaded', function () {
+        const modificarModal = document.getElementById('modificarModal');
+        modificarModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const fecha = button.getAttribute('data-fecha');
+            const hora = button.getAttribute('data-hora');
+
+            document.getElementById('modificar_id').value = id;
+            document.getElementById('modificar_fecha').value = fecha;
+            document.getElementById('modificar_hora').value = hora;
+        });
+    });
+</script>
 {% endblock %}

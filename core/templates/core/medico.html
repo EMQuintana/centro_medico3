@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load tz %}
 {% block content %}
 <div class="container mt-5">
     <!-- Encabezado -->
@@ -7,8 +8,9 @@
         <p class="lead text-secondary">Bienvenido, <strong>{{ user.first_name }} {{ user.last_name }}</strong></p>
     </div>
 
-    <!-- Opciones principales -->
-    <div class="row justify-content-center gy-4">
+    <!-- Botones principales -->
+    <div class="row justify-content-center gy-4 mb-5">
+        <!-- Buscar Fichas Médicas -->
         <div class="col-md-4">
             <div class="card shadow-lg border-primary">
                 <div class="card-body text-center">
@@ -18,6 +20,7 @@
                 </div>
             </div>
         </div>
+        <!-- Gestionar Disponibilidad -->
         <div class="col-md-4">
             <div class="card shadow-lg border-secondary">
                 <div class="card-body text-center">
@@ -29,25 +32,54 @@
         </div>
     </div>
 
-    <!-- Botón de notificaciones -->
-    <div class="text-center mt-5">
+    <!-- Botones de Notificaciones y Reservas del Día -->
+    <div class="d-flex justify-content-center gap-3 mb-5">
+        <!-- Botón de Notificaciones -->
         <button 
-            class="btn btn-warning btn-lg px-5 py-3 shadow position-relative" 
-            id="notificaciones-reservas" 
+            class="btn btn-warning btn-lg px-4 py-3 shadow position-relative" 
+            id="boton-notificaciones" 
+            data-bs-toggle="modal" 
+            data-bs-target="#modalNotificaciones">
+            🔔 Notificaciones
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="contador-notificaciones">
+                0
+            </span>
+        </button>
+
+        <!-- Botón de Reservas del Día -->
+        <button 
+            class="btn btn-info btn-lg px-4 py-3 shadow position-relative" 
+            id="boton-reservas" 
             data-bs-toggle="modal" 
             data-bs-target="#modalReservas">
-            🔔 Reservas del Día
+            📅 Reservas del Día
             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                 {% if reservas_hoy %}{{ reservas_hoy|length }}{% else %}0{% endif %}
             </span>
         </button>
+
     </div>
 
-    <!-- Modal de Reservas -->
+    <!-- Modal de Notificaciones -->
+    <div class="modal fade" id="modalNotificaciones" tabindex="-1" aria-labelledby="modalNotificacionesLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="modalNotificacionesLabel">Notificaciones</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="list-group" id="lista-notificaciones">
+                        <li class="list-group-item text-center text-muted">Cargando notificaciones...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="modalReservas" tabindex="-1" aria-labelledby="modalReservasLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header bg-info text-white">
                     <h5 class="modal-title" id="modalReservasLabel">Reservas del Día</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
@@ -55,36 +87,96 @@
                     {% if reservas_hoy %}
                         <ul class="list-group">
                             {% for reserva in reservas_hoy %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    {% if reserva.fecha_reserva and reserva.paciente %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
                                         <strong>Hora:</strong> {{ reserva.fecha_reserva.fecha_disponible|date:"H:i" }}<br>
                                         <strong>Paciente:</strong> {{ reserva.paciente.nombre }}<br>
                                         <strong>Motivo:</strong> {{ reserva.motivo }}
-                                    {% else %}
-                                        <p class="text-danger">Información incompleta para esta reserva</p>
-                                    {% endif %}
-                                </div>
-                                <div>
-                                    {% if reserva.id %}
+                                    </div>
                                     <a href="{% url 'crear_ficha' reserva_id=reserva.id %}" 
                                        class="btn btn-primary btn-sm shadow-sm">
                                        Crear Ficha Médica
                                     </a>
-                                    {% endif %}
-                                </div>
-                            </li>
+                                </li>
                             {% endfor %}
                         </ul>
                     {% else %}
-                        <p class="text-center text-muted">No hay reservas para hoy.</p>
+                        <p class="text-muted text-center">No hay reservas para hoy.</p>
                     {% endif %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>
     </div>
+    
+
+    <!-- Contenedor de Toasts -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 1050;"></div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        actualizarNotificaciones();
+        setInterval(actualizarNotificaciones, 10000); // Actualiza cada 10 segundos
+
+        function actualizarNotificaciones() {
+            fetch("{% url 'obtener_notificaciones' %}")
+                .then(response => response.json())
+                .then(data => {
+                    // Actualiza el contador
+                    const contador = document.getElementById('contador-notificaciones');
+                    contador.textContent = data.length || 0;
+
+                    // Actualiza el modal
+                    const lista = document.getElementById('lista-notificaciones');
+                    lista.innerHTML = ''; // Limpia el contenido
+
+                    if (data.length > 0) {
+                        data.forEach(notificacion => {
+                            lista.innerHTML += `
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    ${notificacion.mensaje}
+                                    <button class="btn btn-sm btn-primary btn-marcar-leido" data-id="${notificacion.id}">
+                                        Marcar como leído
+                                    </button>
+                                </li>
+                            `;
+
+                            // Agrega toast dinámico
+                            const toastContainer = document.getElementById('toastContainer');
+                            const toast = document.createElement('div');
+                            toast.classList.add('toast', 'align-items-center', 'text-white', 'bg-primary', 'border-0', 'mb-2');
+                            toast.setAttribute('role', 'alert');
+                            toast.setAttribute('aria-live', 'assertive');
+                            toast.setAttribute('aria-atomic', 'true');
+                            toast.innerHTML = `
+                                <div class="d-flex">
+                                    <div class="toast-body">${notificacion.mensaje}</div>
+                                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                                </div>
+                            `;
+                            toastContainer.appendChild(toast);
+                            new bootstrap.Toast(toast, { delay: 5000 }).show();
+                        });
+                    } else {
+                        lista.innerHTML = `<li class="list-group-item text-center text-muted">No hay notificaciones nuevas.</li>`;
+                    }
+                })
+                .catch(error => console.error("Error al cargar notificaciones:", error));
+        }
+
+        // Marcar como leído
+        document.body.addEventListener('click', function (e) {
+            if (e.target.classList.contains('btn-marcar-leido')) {
+                const id = e.target.dataset.id;
+                fetch(`/marcar-notificacion-leida/${id}/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' }
+                }).then(() => {
+                    e.target.closest('li').remove();
+                    actualizarNotificaciones();
+                });
+            }
+        });
+    });
+</script>
 {% endblock %}

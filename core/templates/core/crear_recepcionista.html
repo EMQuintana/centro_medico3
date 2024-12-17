@@ -1,7 +1,6 @@
 {% extends "core/base.html" %}
 {% load form_filters %}
 
-
 {% block content %}
 <div class="container mt-5">
     <div class="card mx-auto" style="max-width: 600px;">
@@ -42,9 +41,11 @@
                     {{ form.direccion|add_class:"form-control" }}
                 </div>
 
+                <!-- Fecha con Calendario -->
                 <div class="mb-3">
                     <label for="id_fecha_contratacion" class="form-label">Fecha de Contratación:</label>
-                    {{ form.fecha_contratacion|add_class:"form-control" }}
+                    <input type="date" id="id_fecha_contratacion" name="fecha_contratacion" class="form-control"
+                           value="{{ form.fecha_contratacion.value|default:'' }}" required>
                 </div>
 
                 <div class="d-grid gap-2">

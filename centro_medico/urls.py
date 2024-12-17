@@ -36,8 +36,11 @@ urlpatterns = [
     path('fichas/eliminar/<int:ficha_id>/', ficha_medica_views.eliminar_ficha, name='eliminar_ficha'),
     path('disponibilidades/', ficha_medica_views.gestionar_disponibilidades, name='gestionar_disponibilidades'),
     path('disponibilidades/eliminar/<int:disponibilidad_id>/', ficha_medica_views.eliminar_disponibilidad, name='eliminar_disponibilidad'),
-
-
+    path('marcar-notificacion-leida/<int:notificacion_id>/', ficha_medica_views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
+    path('notificaciones/ajax/', ficha_medica_views.obtener_notificaciones, name='obtener_notificaciones'),
+    path('reservas/activas/', ficha_medica_views.obtener_reservas_activas, name='obtener_reservas_activas'),
+    path('modificar-disponibilidad/', ficha_medica_views.modificar_disponibilidad, name='modificar_disponibilidad'),
+    path('ficha/<int:ficha_id>/pdf/', ficha_medica_views.generar_ficha_pdf, name='generar_ficha_pdf'),
 
     # APIs
     path('api/medicos/', ficha_medica_views.api_medicos, name='api_medicos'),

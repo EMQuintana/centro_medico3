@@ -63,6 +63,10 @@
                                         onclick="return confirm('¿Estás seguro de eliminar esta ficha médica?');">
                                         🗑️ Eliminar
                                     </button>
+                                    <a href="{% url 'generar_ficha_pdf' ficha.id %}" class="btn btn-success">
+                                        🖨️ Descargar PDF
+                                    </a>
+                                    
                                 </form>
                             </td>
                         </tr>

@@ -11200,4 +11200,33 @@ body {
   padding: 15px;
 }
 
+.panel-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: white;
+  background-color: #007bff; /* Color azul predeterminado */
+  border-radius: 10px;
+  width: 200px;
+  height: 200px;
+  transition: all 0.3s ease-in-out;
+}
+
+.panel-button:hover {
+  background-color: #0056b3; /* Color más oscuro al pasar el mouse */
+  transform: scale(1.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.panel-button .icon {
+  font-size: 3rem; /* Tamaño grande para los íconos */
+}
+
+.panel-button span {
+  margin-top: 10px;
+}
 

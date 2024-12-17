@@ -1,85 +1,68 @@
 {% extends "core/base.html" %}
+{% load static %}
+
 {% block content %}
-<h1 class="text-center">Modificar Reserva</h1>
-<div class="container mt-4">
-    <!-- Mostrar notificaciones -->
-    {% if messages %}
-    <div class="alert alert-info">
-        {% for message in messages %}
-        {{ message }}
-        {% endfor %}
+<div class="container mt-5">
+    <div class="text-center mb-4">
+        <h2 class="display-5">Modificar Recepcionista</h2>
+        <p class="lead">Actualiza la información del recepcionista.</p>
     </div>
-    {% endif %}
-    <form method="post">
-        {% csrf_token %}
-        <div class="card p-4">
-            <!-- Información del paciente -->
-            <div class="mb-3">
-                <label for="paciente" class="form-label">Paciente</label>
-                <input type="text" id="paciente" name="paciente" class="form-control" value="{{ reserva.paciente.nombre }}" readonly>
-            </div>
 
-            <!-- Selección de médico -->
-            <div class="mb-3">
-                <label for="medico" class="form-label">Médico</label>
-                <select id="medico" name="medico" class="form-select" required>
-                    <option value="">Seleccione un médico</option>
-                    {% for medico in medicos %}
-                    <option value="{{ medico.id }}" {% if medico.id == reserva.medico.id %}selected{% endif %}>
-                        {{ medico.user.first_name }} {{ medico.user.last_name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
+    <div class="card shadow">
+        <div class="card-body">
+            <form method="POST" action="">
+                {% csrf_token %}
+                <div class="row">
+                    <!-- Nombre -->
+                    <div class="col-md-6 mb-3">
+                        <label for="first_name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" 
+                               value="{{ recepcionista.user.first_name }}" required>
+                    </div>
+                    <!-- Apellido -->
+                    <div class="col-md-6 mb-3">
+                        <label for="last_name" class="form-label">Apellido</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" 
+                               value="{{ recepcionista.user.last_name }}" required>
+                    </div>
+                </div>
 
-            <!-- Selección de hora disponible -->
-            <div class="mb-3">
-                <label for="hora_disponible" class="form-label">Hora Disponible</label>
-                <select id="hora_disponible" name="hora_disponible" class="form-select" required>
-                    <option value="">Seleccione una hora disponible</option>
-                </select>
-            </div>
+                <div class="row">
+                    <!-- RUT -->
+                    <div class="col-md-6 mb-3">
+                        <label for="username" class="form-label">RUT</label>
+                        <input type="text" class="form-control" id="username" name="username" 
+                               value="{{ recepcionista.user.username }}" required>
+                    </div>
+                    <!-- Teléfono -->
+                    <div class="col-md-6 mb-3">
+                        <label for="telefono" class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="telefono" name="telefono" 
+                               value="{{ recepcionista.telefono }}">
+                    </div>
+                </div>
 
-            <!-- Motivo de la reserva -->
-            <div class="mb-3">
-                <label for="motivo" class="form-label">Motivo</label>
-                <textarea id="motivo" name="motivo" class="form-control" rows="3">{{ reserva.motivo }}</textarea>
-            </div>
+                <div class="row">
+                    <!-- Dirección -->
+                    <div class="col-md-6 mb-3">
+                        <label for="direccion" class="form-label">Dirección</label>
+                        <textarea class="form-control" id="direccion" name="direccion" rows="2">{{ recepcionista.direccion }}</textarea>
+                    </div>
+                    <!-- Fecha de Contratación -->
+                    <div class="col-md-6 mb-3">
+                        <label for="fecha_contratacion" class="form-label">Fecha de Contratación</label>
+                        <input type="date" class="form-control" id="fecha_contratacion" name="fecha_contratacion" 
+                               value="{{ recepcionista.fecha_contratacion|date:'Y-m-d' }}">
+                    </div>
+                </div>
 
-            <button type="submit" class="btn btn-success w-100">Guardar Cambios</button>
-            <a href="{% url 'listar_reservas' %}" class="btn btn-secondary w-100 mt-2">Cancelar</a>
+                <!-- Botones -->
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-success px-4">Guardar Cambios</button>
+                    <a href="{% url 'listar_recepcionistas' %}" class="btn btn-secondary px-4">Cancelar</a>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
 </div>
-
-<script>
-    // Cargar las horas disponibles del médico seleccionado
-    document.getElementById('medico').addEventListener('change', function () {
-        const medicoId = this.value;
-        const horaSelect = document.getElementById('hora_disponible');
-        horaSelect.innerHTML = '<option value="">Cargando horas disponibles...</option>';
-
-        if (medicoId) {
-            fetch(`/api/disponibilidades/?medico_id=${medicoId}`)
-                .then(response => response.json())
-                .then(data => {
-                    horaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
-                    data.forEach(hora => {
-                        const selected = hora.id === {{ reserva.fecha_reserva.id|default:0 }} ? 'selected' : '';
-                        horaSelect.innerHTML += `<option value="${hora.id}" ${selected}>${hora.fecha_hora}</option>`;
-                    });
-                })
-                .catch(error => {
-                    console.error('Error al cargar las horas disponibles:', error);
-                    horaSelect.innerHTML = '<option value="">Error al cargar horas disponibles</option>';
-                });
-        } else {
-            horaSelect.innerHTML = '<option value="">Seleccione un médico primero</option>';
-        }
-    });
-
-    // Disparar el cambio para cargar las horas del médico actual al cargar la página
-    document.getElementById('medico').dispatchEvent(new Event('change'));
-</script>
 {% endblock %}
-

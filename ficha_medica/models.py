@@ -1,14 +1,26 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
 from datetime import date
-from django.utils.timezone import localtime
+from django.utils.timezone import localtime, now
+from django.core.validators import RegexValidator
 
 class Paciente(models.Model):
     rut = models.CharField(max_length=12, unique=True)  # Ejemplo: 12345678-9
     nombre = models.CharField(max_length=100)
     fecha_nacimiento = models.DateField(blank=True, null=True)  # Campo adicional
     direccion = models.TextField(blank=True, null=True)
-    telefono = models.CharField(max_length=15, blank=True, null=True)
+    telefono = models.CharField(
+        max_length=15,
+        blank=True,
+        null=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\d+$',
+                message="El teléfono solo debe contener números.",
+                code='invalid_telefono'
+            )
+        ]
+    )
     email = models.EmailField(blank=True, null=True)
 
     class Meta:
@@ -41,7 +53,18 @@ class Especialidad(models.Model):
 class Medico(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     especialidad = models.ForeignKey(Especialidad, on_delete=models.CASCADE, related_name="medicos")  # Relación con Especialidad
-    telefono = models.CharField(max_length=15, blank=True, null=True)
+    telefono = models.CharField(
+        max_length=15,
+        blank=True,
+        null=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\d+$',
+                message="El teléfono solo debe contener números.",
+                code='invalid_telefono'
+            )
+        ]
+    )
 
     class Meta:
         verbose_name = "Medico"
@@ -76,7 +99,18 @@ class FichaMedica(models.Model):
 
 class Recepcionista(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    telefono = models.CharField(max_length=15, blank=True, null=True)
+    telefono = models.CharField(
+        max_length=15,
+        blank=True,
+        null=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\d+$',
+                message="El teléfono solo debe contener números.",
+                code='invalid_telefono'
+            )
+        ]
+    )
     direccion = models.TextField(blank=True, null=True)
     fecha_contratacion = models.DateField(blank=True, null=True)
 
@@ -126,5 +160,13 @@ class Reserva(models.Model):
     def __str__(self):
         return f"Reserva de {self.paciente.nombre} gestionada por {self.recepcionista.first_name if self.recepcionista else 'N/A'} para el médico {self.medico.user.first_name}"
 
+class Notificacion(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notificaciones')
+    mensaje = models.TextField()
+    fecha_creacion = models.DateTimeField(default=now)
+    leido = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Notificación para {self.usuario.username} - {self.mensaje}"
 
 

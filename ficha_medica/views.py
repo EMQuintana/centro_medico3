@@ -1,27 +1,80 @@
+
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import FichaMedica, Paciente, Reserva, Disponibilidad, Medico, Especialidad, Recepcionista
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login
-from ficha_medica.utils import role_required
-from datetime import datetime, date
-from django.http import JsonResponse
-from ficha_medica.forms import FichaMedicaForm, DisponibilidadForm, ReservaForm, PacienteForm, MedicoForm, RecepcionistaForm
 from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
-from django.utils.timezone import make_aware, localtime, timezone, now
-from django.contrib.auth.models import Group, User
+from django.http import JsonResponse
 from django.core.serializers.json import DjangoJSONEncoder
-import json
 from django.core.cache import cache
-from django.utils.dateformat import format
 from django.core.exceptions import ValidationError
+from django.http import HttpResponse
+
+from ficha_medica.utils import role_required
+from ficha_medica.forms import (
+    FichaMedicaForm, DisponibilidadForm, ReservaForm,
+    PacienteForm, MedicoForm, RecepcionistaForm
+)
+from .models import (
+    FichaMedica, Paciente, Reserva, Disponibilidad,
+    Medico, Especialidad, Recepcionista, Notificacion
+)
+
+from django.utils.timezone import make_aware, localtime, now
+from datetime import datetime, timedelta, date
+from django.contrib.auth.models import Group, User
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+import json
+import logging
+
+# Configuración de logging
+logger = logging.getLogger(__name__)
+
+
+
+
 
 def admin_or_superuser_required(view_func):
     """
     Decorador que permite acceso solo a administradores o superusuarios.
     """
     return user_passes_test(lambda u: u.is_active and (u.is_staff or u.is_superuser))(view_func)
+
+
+def generar_ficha_pdf(request, ficha_id):
+    # Obtener la ficha médica específica
+    ficha = FichaMedica.objects.get(id=ficha_id)
+
+    # Configurar la respuesta HTTP para PDF
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="ficha_medica_{ficha_id}.pdf"'
+
+    # Crear el objeto canvas para generar el PDF
+    p = canvas.Canvas(response, pagesize=A4)
+
+    # Añadir contenido al PDF
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(200, 800, "Ficha Médica")
+
+    p.setFont("Helvetica", 12)
+    p.drawString(100, 750, f"Paciente: {ficha.paciente.nombre}")
+    p.drawString(100, 730, f"RUT: {ficha.paciente.rut}")
+    p.drawString(100, 710, f"Edad: {ficha.paciente.edad if ficha.paciente.edad else 'No registrada'}")
+    p.drawString(100, 690, f"Diagnóstico: {ficha.diagnostico}")
+    p.drawString(100, 670, f"Tratamiento: {ficha.tratamiento}")
+    p.drawString(100, 650, f"Observaciones: {ficha.observaciones if ficha.observaciones else 'Ninguna'}")
+    p.drawString(100, 630, f"Fecha de Creación: {ficha.fecha_creacion.strftime('%d/%m/%Y')}")
+
+    p.setFont("Helvetica-Oblique", 10)  # Fuente corregida
+    p.drawString(100, 600, "Este documento fue generado automáticamente.")
+
+    # Finalizar y cerrar el PDF
+    p.showPage()
+    p.save()
+
+    return response
 
 @login_required
 @admin_or_superuser_required
@@ -246,29 +299,69 @@ def filtrar_fichas_por_paciente(request, paciente_rut):
 @role_required('Medico')
 def medico_dashboard(request):
     medico = request.user.medico
-    current_time = now()
+    hora_actual = localtime(now())  # Hora actual en la zona local
 
-    # Obtener todas las reservas completas en vez de limitar los campos con 'values'
+    # Filtrar reservas de hoy y futuras
     reservas_hoy = Reserva.objects.filter(
         medico=medico,
-        fecha_reserva__fecha_disponible__date=current_time.date(),
-        fecha_reserva__fecha_disponible__gte=current_time
-    ).select_related('paciente').order_by('fecha_reserva__fecha_disponible')
+        fecha_reserva__fecha_disponible__date=hora_actual.date(),
+        fecha_reserva__fecha_disponible__gte=hora_actual - timedelta(minutes=5)  # Mostrar horas pasadas recientes
+    ).order_by('fecha_reserva__fecha_disponible')
 
-    # Recuperar notificaciones de CRUD de reservas (opcional)
-    notificaciones = []
-    for reserva in reservas_hoy:
-        mensaje = cache.get(f"notificacion_reserva_{reserva.id}")
-        if mensaje:
-            notificaciones.append({'mensaje': mensaje, 'tipo': 'success'})
-        mensaje_eliminada = cache.get(f"notificacion_reserva_eliminada_{reserva.id}")
-        if mensaje_eliminada:
-            notificaciones.append({'mensaje': mensaje_eliminada, 'tipo': 'error'})
+    logger.info(f"Reservas para hoy: {reservas_hoy.count()}")
+
+    notificaciones = Notificacion.objects.filter(usuario=request.user, leido=False).order_by('-fecha_creacion')
 
     return render(request, 'core/medico.html', {
-        'reservas_hoy': reservas_hoy,  # Enviar los objetos completos de Reserva
-        'notificaciones': notificaciones
+        'reservas_hoy': reservas_hoy,
+        'notificaciones': notificaciones,
     })
+
+
+@login_required
+def marcar_notificacion_leida(request, notificacion_id):
+    if request.method == 'POST':
+        try:
+            notificacion = Notificacion.objects.get(id=notificacion_id, usuario=request.user)
+            notificacion.leido = True
+            notificacion.save()
+            return JsonResponse({"success": True, "message": "Notificación marcada como leída."})
+        except Notificacion.DoesNotExist:
+            return JsonResponse({"success": False, "message": "Notificación no encontrada."}, status=404)
+    return JsonResponse({"success": False, "message": "Método no permitido."}, status=405)
+
+
+
+
+@login_required
+@role_required('Medico')
+def obtener_notificaciones(request):
+    # Debug: imprimir el usuario actual
+    print(f"Usuario actual: {request.user}")
+
+    # Filtra notificaciones no leídas para el usuario actual
+    notificaciones = Notificacion.objects.filter(leido=False, usuario=request.user)
+
+    # Debug: Imprimir las notificaciones
+    print("Notificaciones encontradas:")
+    for n in notificaciones:
+        print(f"ID: {n.id}, Mensaje: {n.mensaje}, Fecha: {n.fecha_creacion}")
+
+    # Devuelve las notificaciones en JSON
+    data = [{"id": n.id, "mensaje": n.mensaje, "fecha_creacion": n.fecha_creacion} for n in notificaciones]
+    return JsonResponse(data, safe=False)
+
+def modificar_disponibilidad(request):
+    if request.method == "POST":
+        id = request.POST.get('disponibilidad_id')
+        fecha = request.POST.get('fecha')
+        hora = request.POST.get('hora')
+        disponibilidad = Disponibilidad.objects.get(id=id)
+        disponibilidad.fecha_disponible = f"{fecha} {hora}"
+        disponibilidad.save()
+        return redirect('gestionar_disponibilidades')
+
+
 # Filtrar fichas médicas por paciente
 @login_required
 @role_required('Medico')
@@ -347,26 +440,33 @@ def crear_ficha_medica(request, reserva_id):
 def gestionar_disponibilidades(request):
     medico = request.user.medico
     disponibilidades = Disponibilidad.objects.filter(medico=medico)
-    reservas_hoy = Reserva.objects.filter(
-        medico=medico,
-        fecha_reserva__fecha_disponible__date=date.today()  # Ajuste aquí
-    )
+
     if request.method == 'POST':
         form = DisponibilidadForm(request.POST)
         if form.is_valid():
             disponibilidad = form.save(commit=False)
-            disponibilidad.medico = medico
+            disponibilidad.medico = medico  # Asigna el médico al objeto
             disponibilidad.save()
-            return redirect('gestionar_disponibilidades')
+            return redirect('gestionar_disponibilidades')  # Redirige después de guardar
+        else:
+            print(form.errors)  # Depura errores del formulario
     else:
         form = DisponibilidadForm()
 
     return render(request, 'fichas_medicas/gestionar_disponibilidades.html', {
         'form': form,
         'disponibilidades': disponibilidades,
-        'reservas_hoy': reservas_hoy,
     })
 
+
+def obtener_reservas_activas(request):
+    hora_actual = localtime(now())
+    reservas = Reserva.objects.filter(fecha_reserva__fecha_disponible__gte=hora_actual)
+    data = [
+        {"id": r.id, "paciente": r.paciente.nombre, "hora": r.fecha_reserva.fecha_disponible.strftime('%H:%M')}
+        for r in reservas
+    ]
+    return JsonResponse(data, safe=False)
 
 
 @login_required
@@ -517,6 +617,7 @@ def modificar_paciente(request, paciente_id):
     return render(request, 'pacientes/modificar_paciente.html', {'paciente': paciente})
 
 
+
 @login_required
 @role_required('Recepcionista')
 def eliminar_paciente(request, paciente_id):
@@ -534,29 +635,24 @@ def eliminar_paciente(request, paciente_id):
 def crear_reserva(request):
     if request.method == 'POST':
         form = ReservaForm(request.POST)
-        rut_paciente = request.POST.get('rut_paciente')  # Obtén el RUT del paciente
-        disponibilidad_id = request.POST.get('fecha_reserva')  # Obtén el ID de la disponibilidad seleccionada
-
-        # Valida el paciente
-        paciente = get_object_or_404(Paciente, rut=rut_paciente)
-
-        # Valida la disponibilidad
-        disponibilidad = get_object_or_404(Disponibilidad, id=disponibilidad_id)
-
         if form.is_valid():
             reserva = form.save(commit=False)
-            reserva.paciente = paciente  # Asigna el paciente a la reserva
-            reserva.fecha_reserva = disponibilidad  # Asigna la disponibilidad seleccionada
+            reserva.paciente = form.cleaned_data['rut_paciente']
+            reserva.fecha_reserva.ocupada = True
+            reserva.fecha_reserva.save()
             reserva.save()
 
-            # Marca la disponibilidad como ocupada
-            disponibilidad.ocupada = True
-            disponibilidad.save()
+            # Ajustar la fecha a hora local
+            fecha_local = localtime(reserva.fecha_reserva.fecha_disponible)
 
-            messages.success(request, f"Reserva creada exitosamente para {paciente.nombre}.")
+            # Crear notificación
+            mensaje = f"Se ha registrado una nueva reserva para el paciente {reserva.paciente.nombre} para la fecha del {fecha_local.strftime('%d/%m/%Y %H:%M')}."
+            Notificacion.objects.create(usuario=reserva.medico.user, mensaje=mensaje)
+
+            messages.success(request, "Reserva creada exitosamente.")
             return redirect('listar_reservas')
         else:
-            messages.error(request, "Hubo un error al crear la reserva.")
+            messages.error(request, "Hubo un error al crear la reserva. Verifique los datos.")
     else:
         form = ReservaForm()
 
@@ -567,47 +663,86 @@ def crear_reserva(request):
 @role_required('Recepcionista')
 def modificar_reserva(request, reserva_id):
     reserva = get_object_or_404(Reserva, id=reserva_id)
-    medicos = Medico.objects.all()
+    especialidades = Especialidad.objects.all()
+    medicos = Medico.objects.filter(especialidad=reserva.especialidad)
+    disponibilidades = Disponibilidad.objects.filter(medico=reserva.medico, ocupada=False)
 
     if request.method == 'POST':
-        # Actualizar la información de la reserva
+        especialidad_id = request.POST.get('especialidad')
         medico_id = request.POST.get('medico')
         fecha_reserva_id = request.POST.get('fecha_reserva')
-        motivo = request.POST.get('motivo')
 
-        if medico_id and fecha_reserva_id:
-            # Liberar la disponibilidad anterior
+        # Validar campos seleccionados
+        if not especialidad_id or not medico_id or not fecha_reserva_id:
+            messages.error(request, "Todos los campos son obligatorios.")
+            return render(request, 'reservas/modificar_reserva.html', {
+                'reserva': reserva,
+                'especialidades': especialidades,
+                'medicos': medicos,
+                'disponibilidades': disponibilidades
+            })
+
+        # Obtener instancias de los modelos seleccionados
+        try:
+            especialidad = Especialidad.objects.get(id=especialidad_id)
+            medico = Medico.objects.get(id=medico_id, especialidad=especialidad)
+            nueva_disponibilidad = Disponibilidad.objects.get(id=fecha_reserva_id, medico=medico, ocupada=False)
+        except (Especialidad.DoesNotExist, Medico.DoesNotExist, Disponibilidad.DoesNotExist):
+            messages.error(request, "Hubo un error al seleccionar los datos. Verifique las opciones.")
+            return render(request, 'reservas/modificar_reserva.html', {
+                'reserva': reserva,
+                'especialidades': especialidades,
+                'medicos': medicos,
+                'disponibilidades': disponibilidades
+            })
+
+        # Liberar la disponibilidad anterior si se seleccionó una nueva
+        if reserva.fecha_reserva != nueva_disponibilidad:
             reserva.fecha_reserva.ocupada = False
             reserva.fecha_reserva.save()
-
-            # Asignar la nueva disponibilidad
-            nueva_disponibilidad = get_object_or_404(Disponibilidad, id=fecha_reserva_id)
             nueva_disponibilidad.ocupada = True
             nueva_disponibilidad.save()
 
-            # Actualizar la reserva
-            reserva.medico_id = medico_id
-            reserva.fecha_reserva = nueva_disponibilidad
-            reserva.motivo = motivo
-            reserva.save()
+            # Crear notificación para el médico
+            fecha_local = localtime(nueva_disponibilidad.fecha_disponible)
+            mensaje = f"Se ha modificado la reserva para el paciente {reserva.paciente.nombre}. Nueva hora: {fecha_local.strftime('%d/%m/%Y %H:%M')}."
+            Notificacion.objects.create(usuario=medico.user, mensaje=mensaje)
 
-            return redirect('listar_reservas')
+        # Actualizar los datos de la reserva
+        reserva.especialidad = especialidad
+        reserva.medico = medico
+        reserva.fecha_reserva = nueva_disponibilidad
+        reserva.motivo = request.POST.get('motivo', reserva.motivo)
+        reserva.save()
 
-    context = {
+        messages.success(request, "Reserva modificada exitosamente.")
+        return redirect('listar_reservas')  # Redireccionar después de guardar
+
+    # Contexto inicial si es GET
+    return render(request, 'reservas/modificar_reserva.html', {
         'reserva': reserva,
+        'especialidades': especialidades,
         'medicos': medicos,
-    }
-    return render(request, 'reservas/modificar_reserva.html', context)
+        'disponibilidades': disponibilidades,
+    })
+
+
 
 @login_required
 @role_required('Recepcionista')
 def eliminar_reserva(request, reserva_id):
-    if request.method == "POST":
-        reserva = get_object_or_404(Reserva, id=reserva_id)
-        # Liberar la disponibilidad asociada
+    reserva = get_object_or_404(Reserva, id=reserva_id)
+    if request.method == 'POST':
         reserva.fecha_reserva.ocupada = False
         reserva.fecha_reserva.save()
-        # Eliminar la reserva
+
+        # Ajustar la fecha a hora local
+        fecha_local = localtime(reserva.fecha_reserva.fecha_disponible)
+
+        # Crear notificación
+        mensaje = f"Se ha eliminado la reserva para el paciente {reserva.paciente.nombre} programada para el {fecha_local.strftime('%d/%m/%Y %H:%M')}."
+        Notificacion.objects.create(usuario=reserva.medico.user, mensaje=mensaje)
+
         reserva.delete()
         return JsonResponse({"success": True})
     else:
@@ -617,28 +752,44 @@ def eliminar_reserva(request, reserva_id):
 
 
 
+
 def api_medicos(request):
     especialidad_id = request.GET.get('especialidad_id')
-    if especialidad_id:
-        try:
-            medicos = Medico.objects.filter(especialidad_id=especialidad_id)
-            data = [{'id': medico.id, 'nombre': f"{medico.user.first_name} {medico.user.last_name}"} for medico in medicos]
-        except Especialidad.DoesNotExist:
-            data = {'error': 'Especialidad no encontrada.'}
-    else:
-        data = {'error': 'Se requiere el ID de la especialidad.'}
-    return JsonResponse(data, safe=False)
+    if not especialidad_id:
+        return JsonResponse({'error': 'Se requiere el ID de la especialidad.'}, status=400)
+    
+    if not especialidad_id.isdigit():
+        return JsonResponse({'error': 'El ID de la especialidad debe ser un número válido.'}, status=400)
+    
+    try:
+        medicos = Medico.objects.filter(especialidad_id=especialidad_id)
+        if not medicos.exists():
+            return JsonResponse({'error': 'No hay médicos registrados para esta especialidad.'}, status=404)
+
+        data = [{'id': medico.id, 'nombre': f"{medico.user.first_name} {medico.user.last_name}"} for medico in medicos]
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        return JsonResponse({'error': f'Error inesperado: {str(e)}'}, status=500)
+
 
 
 def api_disponibilidades(request):
     medico_id = request.GET.get('medico_id')
-    if medico_id:
-        # Filtrar disponibilidades que no están ocupadas y cuya fecha no ha pasado
+    if not medico_id:
+        return JsonResponse({'error': 'Se requiere el ID del médico.'}, status=400)
+    
+    if not medico_id.isdigit():
+        return JsonResponse({'error': 'El ID del médico debe ser un número válido.'}, status=400)
+
+    try:
+        medico = Medico.objects.get(id=medico_id)
         disponibilidades = Disponibilidad.objects.filter(
-            medico_id=medico_id, 
-            ocupada=False, 
-            fecha_disponible__gte=now()
+            medico=medico, ocupada=False, fecha_disponible__gte=now()
         )
+
+        if not disponibilidades.exists():
+            return JsonResponse({'error': 'No hay disponibilidades para este médico.'}, status=404)
+
         data = [
             {
                 'id': disp.id,
@@ -646,25 +797,33 @@ def api_disponibilidades(request):
             } for disp in disponibilidades
         ]
         return JsonResponse(data, safe=False)
-    else:
-        return JsonResponse({'error': 'Se requiere el ID del médico.'}, status=400)
+    except Medico.DoesNotExist:
+        return JsonResponse({'error': 'El médico no existe.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': f'Error inesperado: {str(e)}'}, status=500)
+
 
 def api_validar_rut(request):
     rut = request.GET.get('rut')
     if not rut:
         return JsonResponse({'error': 'RUT no proporcionado.'}, status=400)
+    
+    # Valida formato del RUT
+    if not re.match(r'^\d{7,8}-\d{1}$', rut):
+        return JsonResponse({'error': 'El RUT debe estar en el formato correcto (12345678-9).'}, status=400)
 
     try:
         paciente = Paciente.objects.get(rut=rut)
-        if paciente.fecha_nacimiento:
-            edad = paciente.edad
-        else:
-            edad = 'No registrada'
+        edad = paciente.edad if paciente.fecha_nacimiento else 'No registrada'
+
         return JsonResponse({
             'nombre': paciente.nombre,
             'edad': edad
         })
     except Paciente.DoesNotExist:
         return JsonResponse({'error': 'Paciente no encontrado.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': f'Error inesperado: {str(e)}'}, status=500)
+
 
 from django.http import JsonResponse

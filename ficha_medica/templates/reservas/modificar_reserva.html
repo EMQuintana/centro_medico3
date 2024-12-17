@@ -6,25 +6,46 @@
 <div class="container">
     <form method="post">
         {% csrf_token %}
+        
+        <!-- Paciente -->
         <div class="mb-3">
             <label for="paciente" class="form-label">Paciente</label>
             <input type="text" id="paciente" class="form-control" value="{{ reserva.paciente.nombre }}" readonly>
         </div>
+
+        <!-- Motivo -->
         <div class="mb-3">
             <label for="motivo" class="form-label">Motivo</label>
             <textarea id="motivo" name="motivo" class="form-control" rows="3" required>{{ reserva.motivo }}</textarea>
         </div>
+
+        <!-- Especialidad -->
         <div class="mb-3">
-            <label for="medico" class="form-label">Médico</label>
-            <select id="fecha_reserva" name="fecha_reserva" class="form-select" required>
-                <option value="">Seleccione una hora disponible</option>
-                {% for disponibilidad in disponibilidades %}
-                <option value="{{ disponibilidad.id }}" {% if disponibilidad.id == reserva.fecha_reserva.id %}selected{% endif %}>
-                    {{ disponibilidad.fecha_disponible|date:"d/m/Y H:i" }}
+            <label for="especialidad" class="form-label">Especialidad</label>
+            <select id="especialidad" name="especialidad" class="form-select" required>
+                <option value="">Seleccione una especialidad</option>
+                {% for especialidad in especialidades %}
+                <option value="{{ especialidad.id }}" {% if especialidad.id == reserva.especialidad.id %}selected{% endif %}>
+                    {{ especialidad.nombre }}
                 </option>
                 {% endfor %}
             </select>
         </div>
+
+        <!-- Médico -->
+        <div class="mb-3">
+            <label for="medico" class="form-label">Médico</label>
+            <select id="medico" name="medico" class="form-select" required>
+                <option value="">Seleccione un médico</option>
+                {% for medico in medicos %}
+                <option value="{{ medico.id }}" {% if medico.id == reserva.medico.id %}selected{% endif %}>
+                    {{ medico.user.first_name }} {{ medico.user.last_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Fecha y Hora -->
         <div class="mb-3">
             <label for="fecha_reserva" class="form-label">Fecha y Hora</label>
             <select id="fecha_reserva" name="fecha_reserva" class="form-select" required>
@@ -33,6 +54,8 @@
                 </option>
             </select>
         </div>
+
+        <!-- Botones -->
         <div class="text-center">
             <button type="submit" class="btn btn-success">Guardar Cambios</button>
             <a href="{% url 'listar_reservas' %}" class="btn btn-secondary">Cancelar</a>
@@ -41,34 +64,55 @@
 </div>
 
 <script>
-    document.getElementById('medico').addEventListener('change', function () {
-        const medicoId = this.value; // Obtiene el ID del médico seleccionado
-        const fechaReservaSelect = document.getElementById('fecha_reserva'); // Select de fechas disponibles
+    const especialidadSelect = document.getElementById('especialidad');
+    const medicoSelect = document.getElementById('medico');
+    const fechaReservaSelect = document.getElementById('fecha_reserva');
 
-        // Muestra un mensaje mientras carga las fechas
+    // Función para cargar médicos
+    function cargarMedicos(especialidadId, selectedMedicoId = null) {
+        medicoSelect.innerHTML = '<option value="">Cargando médicos...</option>';
+        fechaReservaSelect.innerHTML = '<option value="">Seleccione un médico primero</option>';
+
+        if (especialidadId) {
+            fetch(`/api/medicos/?especialidad_id=${especialidadId}`)
+                .then(response => response.json())
+                .then(data => {
+                    medicoSelect.innerHTML = '<option value="">Seleccione un médico</option>';
+                    data.forEach(medico => {
+                        medicoSelect.innerHTML += `
+                            <option value="${medico.id}" ${selectedMedicoId == medico.id ? 'selected' : ''}>
+                                ${medico.nombre}
+                            </option>
+                        `;
+                    });
+                    if (selectedMedicoId) cargarDisponibilidades(selectedMedicoId); // Cargar horas si hay médico seleccionado
+                })
+                .catch(error => {
+                    console.error('Error al cargar los médicos:', error);
+                    medicoSelect.innerHTML = '<option value="">Error al cargar los médicos</option>';
+                });
+        } else {
+            medicoSelect.innerHTML = '<option value="">Seleccione una especialidad primero</option>';
+            fechaReservaSelect.innerHTML = '<option value="">Seleccione un médico primero</option>';
+        }
+    }
+
+    // Función para cargar disponibilidades
+    function cargarDisponibilidades(medicoId, selectedFechaReservaId = null) {
         fechaReservaSelect.innerHTML = '<option value="">Cargando horas disponibles...</option>';
 
         if (medicoId) {
             fetch(`/api/disponibilidades/?medico_id=${medicoId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Error en la respuesta de la API');
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
                     fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
-                    if (data.length === 0) {
-                        fechaReservaSelect.innerHTML = '<option value="">No hay horas disponibles</option>';
-                    } else {
-                        data.forEach(disponibilidad => {
-                            fechaReservaSelect.innerHTML += `
-                                <option value="${disponibilidad.id}">
-                                    ${disponibilidad.fecha_hora}
-                                </option>
-                            `;
-                        });
-                    }
+                    data.forEach(disponibilidad => {
+                        fechaReservaSelect.innerHTML += `
+                            <option value="${disponibilidad.id}" ${selectedFechaReservaId == disponibilidad.id ? 'selected' : ''}>
+                                ${disponibilidad.fecha_hora}
+                            </option>
+                        `;
+                    });
                 })
                 .catch(error => {
                     console.error('Error al cargar las horas disponibles:', error);
@@ -77,6 +121,31 @@
         } else {
             fechaReservaSelect.innerHTML = '<option value="">Seleccione un médico primero</option>';
         }
+    }
+
+    // Evento al cambiar la especialidad
+    especialidadSelect.addEventListener('change', function () {
+        cargarMedicos(this.value);
+    });
+
+    // Evento al cambiar el médico
+    medicoSelect.addEventListener('change', function () {
+        cargarDisponibilidades(this.value);
+    });
+
+    // Inicialización de datos en caso de edición (valores existentes)
+    document.addEventListener('DOMContentLoaded', function () {
+        const especialidadId = especialidadSelect.value; // Especialidad seleccionada
+        const medicoId = medicoSelect.value; // Médico seleccionado
+        const fechaReservaId = fechaReservaSelect.value; // Fecha seleccionada
+
+        if (especialidadId) {
+            cargarMedicos(especialidadId, medicoId); // Cargar médicos y seleccionar
+        }
+        if (medicoId) {
+            cargarDisponibilidades(medicoId, fechaReservaId); // Cargar horas y seleccionar
+        }
     });
 </script>
+
 {% endblock %}
