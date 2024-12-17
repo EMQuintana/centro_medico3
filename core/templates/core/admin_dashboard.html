@@ -1,0 +1,84 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-12 text-center">
+            <h1 class="titulo-panel text-uppercase mb-4">Panel de Administración</h1>
+            <p class="text-muted">Administre usuarios, médicos y recepcionistas desde este panel.</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center mt-5">
+        <!-- Tarjeta para Registrar Médico -->
+        <div class="col-md-3 d-flex align-items-stretch">
+            <div class="card shadow-sm border-0 w-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="fas fa-user-md fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Registrar Médico</h5>
+                    <p class="card-text text-muted flex-grow-1">Añada un nuevo médico al sistema con sus datos personales y especialidad.</p>
+                    <a href="{% url 'crear_medico' %}" class="btn btn-primary mt-auto">Registrar</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta para Registrar Recepcionista -->
+        <div class="col-md-3 d-flex align-items-stretch">
+            <div class="card shadow-sm border-0 w-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="fas fa-user fa-3x text-secondary mb-3"></i>
+                    <h5 class="card-title">Registrar Recepcionista</h5>
+                    <p class="card-text text-muted flex-grow-1">Añada un nuevo recepcionista con sus datos completos.</p>
+                    <a href="{% url 'crear_recepcionista' %}" class="btn btn-secondary mt-auto">Registrar</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta para Ver Médicos -->
+        <div class="col-md-3 d-flex align-items-stretch">
+            <div class="card shadow-sm border-0 w-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="fas fa-users-medical fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">Ver Médicos</h5>
+                    <p class="card-text text-muted flex-grow-1">Consulte la lista de médicos registrados en el sistema.</p>
+                    <a href="{% url 'listar_medicos' %}" class="btn btn-success mt-auto">Ver Lista</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta para Ver Recepcionistas -->
+        <div class="col-md-3 d-flex align-items-stretch">
+            <div class="card shadow-sm border-0 w-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="fas fa-user-tie fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Ver Recepcionistas</h5>
+                    <p class="card-text text-muted flex-grow-1">Consulte la lista de recepcionistas registrados en el sistema.</p>
+                    <a href="{% url 'listar_recepcionistas' %}" class="btn btn-info mt-auto">Ver Lista</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .titulo-panel {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    .card {
+        border-radius: 10px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+</style>
+
+{% endblock %}

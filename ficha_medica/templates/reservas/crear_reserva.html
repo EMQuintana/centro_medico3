@@ -1,0 +1,229 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<br><br><br><br><br>
+<h1 class="text-center">Crear Reserva</h1>
+
+<div class="container mt-4">
+    <form method="POST" id="crear-reserva-form">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="rut_paciente" class="form-label">RUT del Paciente</label>
+            <div class="input-group">
+                <input type="text" id="rut_paciente" name="rut_paciente" class="form-control" placeholder="12345678-9" required>
+                <button type="button" class="btn btn-secondary" id="validar-rut">Validar RUT</button>
+            </div>
+            <div id="rut-validado" class="mt-2 text-success" style="display: none;">RUT válido. Nombre: <span id="nombre-paciente"></span>, Edad: <span id="edad-paciente"></span>.</div>
+            <div id="rut-error" class="mt-2 text-danger" style="display: none;">RUT inválido o no encontrado.</div>
+        </div>
+        <div id="paciente-info" style="display: none;">
+            <p><strong>Nombre:</strong> <span id="nombre-paciente"></span></p>
+            <p><strong>Edad:</strong> <span id="edad-paciente"></span></p>
+        </div>
+        <div class="mb-3">
+            <label for="especialidad" class="form-label">Especialidad</label>
+            <select id="especialidad" name="especialidad" class="form-select" required>
+                <option value="">Seleccione una especialidad</option>
+                {% for especialidad in form.fields.especialidad.queryset %}
+                <option value="{{ especialidad.id }}">{{ especialidad.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="medico" class="form-label">Médico</label>
+            <select id="medico" name="medico" class="form-select" required>
+                <option value="">Seleccione un médico</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="fecha_reserva" class="form-label">Horas Disponibles</label>
+            <select id="fecha_reserva" name="fecha_reserva" class="form-select" required>
+                <option value="">Seleccione una hora disponible</option>
+                {% for disponibilidad in disponibilidades %}
+                <option value="{{ disponibilidad.id }}" {% if disponibilidad.id == reserva.fecha_reserva.id %}selected{% endif %}>
+                    {{ disponibilidad.fecha_disponible|date:"d/m/Y H:i" }}
+                </option>
+                {% endfor %}
+            </select>
+            
+        </div>
+        <div class="mb-3">
+            <label for="motivo" class="form-label">Motivo</label>
+            <textarea id="motivo" name="motivo" class="form-control" rows="3" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Crear Reserva</button>
+    </form>
+
+    {% if form.errors %}
+    <div class="alert alert-danger mt-3">
+        <ul>
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <li><strong>{{ field }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.getElementById('especialidad').addEventListener('change', function () {
+    const especialidadId = this.value;  // Obtiene el ID de la especialidad seleccionada
+    const medicoSelect = document.getElementById('medico');  // Select de médicos
+
+    if (!especialidadId) {
+        medicoSelect.innerHTML = '<option value="">Seleccione un médico</option>';
+        return;
+    }
+
+    // Fetch a la API para obtener los médicos de la especialidad seleccionada
+    fetch(`/api/medicos/?especialidad_id=${especialidadId}`)
+        .then(response => response.json())
+        .then(data => {
+            medicoSelect.innerHTML = '<option value="">Seleccione un médico</option>';
+            if (data.error) {
+                alert(data.error);  // Muestra el error si existe
+            } else {
+                data.forEach(medico => {
+                    medicoSelect.innerHTML += `<option value="${medico.id}">${medico.nombre}</option>`;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar los médicos:', error);
+            alert('Hubo un problema al cargar los médicos. Inténtelo nuevamente.');
+        });
+});
+document.getElementById('medico').addEventListener('change', function () {
+    const medicoId = this.value;  // Obtén el ID del médico seleccionado
+    const fechaReservaSelect = document.getElementById('fecha_reserva');  // Select de fechas disponibles
+
+    if (!medicoId) {
+        fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+        return;
+    }
+
+    // Fetch a la API para obtener las horas disponibles del médico seleccionado
+    fetch(`/api/disponibilidades/?medico_id=${medicoId}`)
+        .then(response => response.json())
+        .then(data => {
+            fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+            if (data.error || data.length === 0) {
+                alert('No hay horas disponibles para este médico.');
+            } else {
+                data.forEach(disponibilidad => {
+                    fechaReservaSelect.innerHTML += `<option value="${disponibilidad.id}">${disponibilidad.fecha_hora}</option>`;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar las horas disponibles:', error);
+            alert('Hubo un problema al cargar las horas disponibles. Inténtelo nuevamente.');
+        });
+});
+document.getElementById('validar-rut').addEventListener('click', function () {
+    const rut = document.getElementById('rut_paciente').value;
+    const nombrePaciente = document.getElementById('nombre-paciente');
+    const edadPaciente = document.getElementById('edad-paciente');
+    const rutValidado = document.getElementById('rut-validado');
+    const rutError = document.getElementById('rut-error');
+
+    // Limpia los mensajes previos
+    rutValidado.style.display = 'none';
+    rutError.style.display = 'none';
+
+    if (!rut) {
+        rutError.style.display = 'block';
+        rutError.textContent = 'Por favor ingrese un RUT.';
+        return;
+    }
+
+    fetch(`/api/validar_rut/?rut=${rut}`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            rutError.style.display = 'block';
+            rutError.textContent = data.error;
+        } else {
+            nombrePaciente.textContent = data.nombre;
+            edadPaciente.textContent = data.edad !== "No registrada" ? data.edad : "Edad no registrada";
+            rutValidado.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        console.error('Error al validar el RUT:', error);
+        rutError.style.display = 'block';
+        rutError.textContent = 'Hubo un problema al validar el RUT. Inténtelo nuevamente.';
+    });
+});
+document.getElementById('medico').addEventListener('change', function () {
+    const medicoId = this.value;  // Obtén el ID del médico seleccionado
+    const fechaReservaSelect = document.getElementById('fecha_reserva');  // Select de fechas disponibles
+
+    if (!medicoId) {
+        fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+        return;
+    }
+
+    // Fetch a la API para obtener las horas disponibles del médico seleccionado
+    fetch(`/api/disponibilidades/?medico_id=${medicoId}`)
+        .then(response => response.json())
+        .then(data => {
+            fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+            if (data.error || data.length === 0) {
+                alert('No hay horas disponibles para este médico.');
+            } else {
+                data.forEach(disponibilidad => {
+                    fechaReservaSelect.innerHTML += `<option value="${disponibilidad.id}">${disponibilidad.fecha_hora}</option>`;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar las horas disponibles:', error);
+            alert('Hubo un problema al cargar las horas disponibles. Inténtelo nuevamente.');
+        });
+});
+document.getElementById('medico').addEventListener('change', function () {
+    const medicoId = this.value;
+    const fechaReservaSelect = document.getElementById('fecha_reserva');
+    fechaReservaSelect.innerHTML = '<option value="">Cargando horas disponibles...</option>';
+
+    fetch(`/api/disponibilidades/?medico_id=${medicoId}`)
+        .then(response => response.json())
+        .then(data => {
+            fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+            data.forEach(disponibilidad => {
+                fechaReservaSelect.innerHTML += `<option value="${disponibilidad.id}">${disponibilidad.fecha_hora}</option>`;
+            });
+        });
+});
+function ajustarHoraUTCaLocal(utcDateString) {
+    const utcDate = new Date(utcDateString);
+    return utcDate.toLocaleString('es-CL', { timeZone: 'America/Santiago' });
+}
+
+// Ejemplo de uso
+fetch(`/api/disponibilidades/?medico_id=${medicoId}`)
+    .then(response => response.json())
+    .then(data => {
+        const fechaReservaSelect = document.getElementById('fecha_reserva');
+        fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+        data.forEach(disponibilidad => {
+            const horaLocal = ajustarHoraUTCaLocal(disponibilidad.fecha_hora);
+            fechaReservaSelect.innerHTML += `<option value="${disponibilidad.id}">${horaLocal}</option>`;
+        });
+    });
+
+
+</script>
+
+{% endblock %}
+
+
+

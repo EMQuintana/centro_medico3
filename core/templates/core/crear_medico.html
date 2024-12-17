@@ -1,0 +1,63 @@
+{% extends 'core/base.html' %}
+{% load form_filters %}
+{% block content %}
+<div class="container mt-5 d-flex justify-content-center">
+    <div class="card shadow-lg" style="width: 30rem;">
+        <div class="card-header text-white bg-primary text-center">
+            <h3>Registrar Médico</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+
+                <!-- Nombre -->
+                <div class="form-group mb-3">
+                    <label for="id_first_name" class="form-label">Nombre</label>
+                    {{ form.first_name|add_class:"form-control" }}
+                </div>
+
+                <!-- Apellido -->
+                <div class="form-group mb-3">
+                    <label for="id_last_name" class="form-label">Apellido</label>
+                    {{ form.last_name|add_class:"form-control" }}
+                </div>
+
+                <!-- RUT -->
+                <div class="mb-3">
+                    <label for="id_username" class="form-label">RUT:</label>
+                    {{ form.username|add_class:"form-control" }}
+                    <small class="form-text text-muted">Ingrese el RUT en el formato <strong>12345678-9</strong>.</small>
+                    {% if form.username.help_text %}
+                        <small class="form-text text-muted">{{ form.username.help_text }}</small>
+                    {% endif %}
+                </div>
+                
+
+                <!-- Contraseña -->
+                <div class="form-group mb-3">
+                    <label for="id_password" class="form-label">Contraseña</label>
+                    {{ form.password|add_class:"form-control" }}
+                </div>
+
+                <!-- Especialidad -->
+                <div class="form-group mb-3">
+                    <label for="id_especialidad" class="form-label">Especialidad</label>
+                    {{ form.especialidad|add_class:"form-control" }}
+                </div>
+
+                <!-- Teléfono -->
+                <div class="form-group mb-3">
+                    <label for="id_telefono" class="form-label">Teléfono</label>
+                    {{ form.telefono|add_class:"form-control" }}
+                </div>
+
+                <!-- Botones -->
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Registrar Médico</button>
+                    <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

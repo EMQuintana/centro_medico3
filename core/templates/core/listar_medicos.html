@@ -1,0 +1,55 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4 text-primary">Lista de Médicos</h1>
+    <div class="card shadow-lg">
+        <div class="card-body">
+            <table class="table table-hover table-bordered">
+                <thead class="table-primary">
+                    <tr class="text-center">
+                        <th>Nombre</th>
+                        <th>Especialidad</th>
+                        <th>Teléfono</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for medico in medicos %}
+                    <tr class="text-center align-middle">
+                        <td>{{ medico.user.first_name }} {{ medico.user.last_name }}</td>
+                        <td>{{ medico.especialidad.nombre }}</td>
+                        <td>{{ medico.telefono }}</td>
+                        <td>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="{% url 'modificar_medico' medico.id %}" class="btn btn-warning btn-sm">Modificar</a>
+                                <button 
+                                    class="btn btn-danger btn-sm" 
+                                    onclick="confirmarEliminacion('{% url 'eliminar_medico' medico.id %}')">
+                                    Eliminar
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">No hay médicos registrados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="d-flex justify-content-end">
+                <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">Volver</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function confirmarEliminacion(url) {
+        if (confirm("¿Estás seguro de que deseas eliminar este médico?")) {
+            window.location.href = url;
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4 text-primary">Lista de Recepcionistas</h1>
+    <div class="card shadow-lg">
+        <div class="card-body">
+            <table class="table table-hover table-bordered">
+                <thead class="table-primary">
+                    <tr class="text-center">
+                        <th>Nombre</th>
+                        <th>Teléfono</th>
+                        <th>Dirección</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for recepcionista in recepcionistas %}
+                    <tr class="text-center align-middle">
+                        <td>{{ recepcionista.user.first_name }} {{ recepcionista.user.last_name }}</td>
+                        <td>{{ recepcionista.telefono }}</td>
+                        <td>{{ recepcionista.direccion }}</td>
+                        <td>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="{% url 'modificar_recepcionista' recepcionista.id %}" class="btn btn-warning btn-sm">Modificar</a>
+                                <button 
+                                    class="btn btn-danger btn-sm" 
+                                    onclick="confirmarEliminacion('{% url 'eliminar_recepcionista' recepcionista.id %}')">
+                                    Eliminar
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">No hay recepcionistas registrados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="d-flex justify-content-end">
+                <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">Volver</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function confirmarEliminacion(url) {
+        if (confirm("¿Estás seguro de que deseas eliminar este recepcionista?")) {
+            window.location.href = url;
+        }
+    }
+</script>
+{% endblock %}
+

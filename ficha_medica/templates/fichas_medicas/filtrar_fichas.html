@@ -1,0 +1,35 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">Fichas Médicas para el RUT: {{ paciente_rut }}</h1>
+
+    <table class="table table-bordered table-striped mt-4">
+        <thead>
+            <tr>
+                <th>Paciente</th>
+                <th>RUT</th>
+                <th>Médico</th>
+                <th>Fecha de Creación</th>
+                <th>Diagnóstico</th>
+                <th>Tratamiento</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ficha in fichas %}
+                <tr>
+                    <td>{{ ficha.paciente.nombre }}</td>
+                    <td>{{ ficha.paciente.rut }}</td>
+                    <td>{{ ficha.medico.user.first_name }} {{ ficha.medico.user.last_name }}</td>
+                    <td>{{ ficha.fecha_creacion|date:"d/m/Y" }}</td>
+                    <td>{{ ficha.diagnostico }}</td>
+                    <td>{{ ficha.tratamiento }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">No se encontraron fichas para este paciente.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

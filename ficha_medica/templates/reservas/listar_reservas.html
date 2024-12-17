@@ -1,0 +1,163 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<br><br><br>
+<h1 class="text-center mb-4">Lista de Reservas</h1>
+
+<!-- Formulario para filtrar por fecha -->
+<div class="container mb-5">
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label for="fecha_inicio" class="form-label">Fecha de Inicio</label>
+            <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control" value="{{ fecha_inicio }}">
+        </div>
+        <div class="col-md-4">
+            <label for="fecha_fin" class="form-label">Fecha de Fin</label>
+            <input type="date" id="fecha_fin" name="fecha_fin" class="form-control" value="{{ fecha_fin }}">
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de reservas -->
+<div class="container">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Paciente</th>
+                    <th>Motivo</th>
+                    <th>Fecha y Hora</th>
+                    <th>Médico</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reserva in reservas %}
+                <tr>
+                    <td>{{ reserva.paciente.nombre }}</td>
+                    <td>{{ reserva.motivo }}</td>
+                    <td>{{ reserva.fecha_reserva.fecha_disponible|date:"d/m/Y H:i" }}</td>
+                    <td>{{ reserva.medico.user.first_name }} {{ reserva.medico.user.last_name }}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            {% if es_medico %}
+                            <a href="{% url 'crear_ficha' reserva.id %}" class="btn btn-success btn-sm">Crear Ficha</a>
+                            {% endif %}
+                            <a href="{% url 'modificar_reserva' reserva.id %}" class="btn btn-warning btn-sm">Modificar</a>
+                            <button 
+                                class="btn btn-danger btn-sm" 
+                                onclick="confirmarEliminacion('{% url 'eliminar_reserva' reserva.id %}')">
+                                Eliminar
+                            </button>
+
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">No se encontraron reservas para el rango de fechas seleccionado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Botón Volver -->
+    <div class="text-center mt-4">
+        <a href="{% url 'recepcionista_dashboard' %}" class="btn btn-secondary">Volver</a>
+    </div>
+</div>
+
+<!-- Paginación -->
+<div class="container mt-4 d-flex justify-content-between align-items-center">
+    {% if reservas.has_previous %}
+    <a href="?page={{ reservas.previous_page_number }}{% if fecha_inicio %}&fecha_inicio={{ fecha_inicio }}{% endif %}{% if fecha_fin %}&fecha_fin={{ fecha_fin }}{% endif %}" class="btn btn-outline-primary">← Anterior</a>
+    {% endif %}
+
+    <span class="fw-bold">Página {{ reservas.number }} de {{ reservas.paginator.num_pages }}</span>
+
+    {% if reservas.has_next %}
+    <a href="?page={{ reservas.next_page_number }}{% if fecha_inicio %}&fecha_inicio={{ fecha_inicio }}{% endif %}{% if fecha_fin %}&fecha_fin={{ fecha_fin }}{% endif %}" class="btn btn-outline-primary">Siguiente →</a>
+    {% endif %}
+</div>
+
+<br><br><br>
+<script>
+    function confirmarEliminacion(url) {
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "Esta acción no se puede deshacer.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire(
+                            '¡Eliminado!',
+                            'La reserva ha sido eliminada.',
+                            'success'
+                        ).then(() => {
+                            location.reload(); // Recargar la página
+                        });
+                    } else {
+                        Swal.fire(
+                            '¡Error!',
+                            data.error || 'No se pudo eliminar la reserva.',
+                            'error'
+                        );
+                    }
+                })
+                .catch(error => {
+                    Swal.fire(
+                        '¡Error!',
+                        'Hubo un problema al eliminar la reserva.',
+                        'error'
+                    );
+                });
+            }
+        });
+    }
+    document.getElementById('medico').addEventListener('change', function () {
+    const medicoId = this.value;  // ID del médico seleccionado
+    const fechaReservaSelect = document.getElementById('fecha_reserva');  // Select de horas disponibles
+
+    if (!medicoId) {
+        fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+        return;
+    }
+
+    // Llamada a la API para obtener horas disponibles
+    fetch(`/api/disponibilidades/?medico_id=${medicoId}`)
+        .then(response => response.json())
+        .then(data => {
+            fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+            if (data.error || data.length === 0) {
+                fechaReservaSelect.innerHTML = '<option value="">No hay horas disponibles</option>';
+            } else {
+                data.forEach(disponibilidad => {
+                    fechaReservaSelect.innerHTML += `<option value="${disponibilidad.id}">${disponibilidad.fecha_hora}</option>`;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar las horas disponibles:', error);
+            alert('Hubo un problema al cargar las horas disponibles. Inténtelo nuevamente.');
+        });
+});
+
+</script>
+{% endblock %}

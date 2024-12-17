@@ -1,0 +1,95 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <!-- Encabezado -->
+    <div class="text-center mb-4">
+        <h1 class="display-5 text-primary">Gestión de Fichas Médicas</h1>
+        <p class="text-muted">Filtra y gestiona las fichas médicas de manera eficiente.</p>
+    </div>
+
+    <!-- Formulario para filtrar -->
+    <form method="get" class="card shadow p-4 mb-5">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <input 
+                    type="text" 
+                    name="rut" 
+                    class="form-control" 
+                    placeholder="Buscar por RUT del paciente" 
+                    value="{{ request.GET.rut|default_if_none:'' }}">
+            </div>
+            <div class="col-md-4">
+                <input 
+                    type="date" 
+                    name="fecha" 
+                    class="form-control" 
+                    value="{{ request.GET.fecha|default_if_none:'' }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">🔍 Filtrar</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Tabla de fichas médicas -->
+    <div class="card shadow">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Paciente</th>
+                        <th>RUT</th>
+                        <th>Médico</th>
+                        <th>Fecha de Creación</th>
+                        <th>Diagnóstico</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ficha in fichas %}
+                        <tr>
+                            <td>{{ ficha.paciente.nombre }}</td>
+                            <td>{{ ficha.paciente.rut }}</td>
+                            <td>{{ ficha.medico.user.first_name }} {{ ficha.medico.user.last_name }}</td>
+                            <td>{{ ficha.fecha_creacion|date:"d/m/Y" }}</td>
+                            <td>{{ ficha.diagnostico }}</td>
+                            <td class="text-center">
+                                <a href="{% url 'modificar_ficha' ficha.id %}" class="btn btn-warning btn-sm me-2">✏️ Modificar</a>
+                                <form action="{% url 'eliminar_ficha' ficha.id %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button 
+                                        type="submit" 
+                                        class="btn btn-danger btn-sm" 
+                                        onclick="return confirm('¿Estás seguro de eliminar esta ficha médica?');">
+                                        🗑️ Eliminar
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No se encontraron fichas médicas para los filtros aplicados.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Botón de volver -->
+    <div class="text-center mt-4">
+        <a href="{% url 'medico_dashboard' %}" class="btn btn-secondary px-5">⬅️ Volver</a>
+    </div>
+
+    <!-- Paginación -->
+    <div class="d-flex justify-content-center align-items-center mt-4">
+        {% if fichas.has_previous %}
+            <a href="?page={{ fichas.previous_page_number }}&{{ request.GET.urlencode }}" class="btn btn-outline-primary mx-2">← Anterior</a>
+        {% endif %}
+        <span class="mx-2 text-muted">Página {{ fichas.number }} de {{ fichas.paginator.num_pages }}</span>
+        {% if fichas.has_next %}
+            <a href="?page={{ fichas.next_page_number }}&{{ request.GET.urlencode }}" class="btn btn-outline-primary mx-2">Siguiente →</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

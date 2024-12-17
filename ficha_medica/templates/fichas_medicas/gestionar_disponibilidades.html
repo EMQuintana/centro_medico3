@@ -1,0 +1,60 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <!-- Encabezado -->
+    <div class="text-center mb-5">
+        <h1 class="display-5 text-primary">Gestionar Disponibilidad</h1>
+        <p class="text-muted">Añade, visualiza o elimina tus horarios disponibles de forma sencilla.</p>
+    </div>
+
+    <!-- Formulario para agregar disponibilidad -->
+    <div class="card shadow mb-5">
+        <div class="card-header bg-primary text-white text-center">
+            <h4>Agregar Disponibilidad</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" action="">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="fecha_disponible" class="form-label">Fecha y Hora Disponible</label>
+                    <input type="datetime-local" id="fecha_disponible" name="fecha_disponible" class="form-control" required>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-success btn-lg">➕ Agregar Horario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de disponibilidades existentes -->
+    <div class="card shadow">
+        <div class="card-header bg-secondary text-white text-center">
+            <h4>Horarios Disponibles</h4>
+        </div>
+        <div class="card-body">
+            {% if disponibilidades.exists %}
+                <ul class="list-group list-group-flush">
+                    {% for disponibilidad in disponibilidades %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-primary fw-bold">
+                                {{ disponibilidad.fecha_disponible|date:"d/m/Y H:i" }}
+                            </span>
+                            <form method="post" action="{% url 'eliminar_disponibilidad' disponibilidad.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm">🗑️ Eliminar</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-center text-muted mt-3">No tienes horarios disponibles agregados.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Botón para regresar -->
+    <div class="text-center mt-4">
+        <a href="{% url 'medico_dashboard' %}" class="btn btn-secondary px-5 py-2">⬅️ Volver al Panel</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4">Panel del Recepcionista</h1>
+        <p class="lead">Bienvenido, <strong>{{ user.first_name }} {{ user.last_name }}</strong></p>
+    </div>
+
+    <div class="row justify-content-center text-center gy-4">
+        <div class="col-md-3">
+            <a href="{% url 'listar_reservas' %}" class="btn btn-primary btn-lg custom-button shadow">
+                📅<br> Ver Reservas
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'crear_reserva' %}" class="btn btn-success btn-lg custom-button shadow">
+                ✏️<br> Registrar Nueva Reserva
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'crear_paciente' %}" class="btn btn-info btn-lg custom-button shadow">
+                ➕<br> Agregar Paciente
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'listar_pacientes' %}" class="btn btn-secondary btn-lg custom-button shadow">
+                👥<br> Ver Pacientes
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

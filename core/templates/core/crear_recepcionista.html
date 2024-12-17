@@ -1,0 +1,70 @@
+{% extends "core/base.html" %}
+{% load form_filters %}
+
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card mx-auto" style="max-width: 600px;">
+        <div class="card-header bg-primary text-white text-center">
+            <h4>Registrar Recepcionista</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="id_first_name" class="form-label">Nombre:</label>
+                    {{ form.first_name|add_class:"form-control" }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_last_name" class="form-label">Apellido:</label>
+                    {{ form.last_name|add_class:"form-control" }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_username" class="form-label">RUT:</label>
+                    {{ form.username|add_class:"form-control" }}
+                    <small class="form-text text-muted">{{ form.username.help_text }}</small>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_password" class="form-label">Contraseña:</label>
+                    {{ form.password|add_class:"form-control" }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_telefono" class="form-label">Teléfono:</label>
+                    {{ form.telefono|add_class:"form-control" }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_direccion" class="form-label">Dirección:</label>
+                    {{ form.direccion|add_class:"form-control" }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_fecha_contratacion" class="form-label">Fecha de Contratación:</label>
+                    {{ form.fecha_contratacion|add_class:"form-control" }}
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Registrar Recepcionista</button>
+                    <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+
+            {% if form.errors %}
+            <div class="alert alert-danger mt-3">
+                <ul>
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                            <li><strong>{{ field }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

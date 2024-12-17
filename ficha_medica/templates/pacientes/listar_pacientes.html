@@ -1,0 +1,100 @@
+{% extends "core/base.html" %}
+{% block content %}
+<br><br>
+<h1 class="text-center">Lista de Pacientes</h1>
+<form method="get" class="my-4">
+    <div class="input-group">
+        <input 
+            type="text" 
+            name="rut" 
+            class="form-control" 
+            placeholder="Buscar por RUT" 
+            value="{{ rut_query }}">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+    </div>
+</form>
+<table class="table table-bordered table-striped mt-4">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>RUT</th>
+            <th>Email</th>
+            <th>Teléfono</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for paciente in pacientes %}
+            <tr>
+                <td>{{ paciente.nombre }}</td>
+                <td>{{ paciente.rut }}</td>
+                <td>{{ paciente.email }}</td>
+                <td>{{ paciente.telefono }}</td>
+                <td>
+                    <a href="{% url 'modificar_paciente' paciente.id %}" class="btn btn-warning btn-sm">Modificar</a>
+                    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalEliminarPaciente" data-id="{{ paciente.id }}" data-nombre="{{ paciente.nombre }}" data-rut="{{ paciente.rut }}">
+                        Eliminar
+                    </button>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" class="text-center">No se encontraron pacientes.</td>
+            </tr>
+        {% endfor %}
+        <a href="{% url 'recepcionista_dashboard' %}" class="btn btn-secondary mx-2">Volver</a>
+    </tbody>
+</table>
+
+<div class="d-flex justify-content-center">
+    {% if pacientes.has_previous %}
+        <a href="?page={{ pacientes.previous_page_number }}{% if rut_query %}&rut={{ rut_query }}{% endif %}" class="btn btn-secondary mx-1">Anterior</a>
+    {% endif %}
+    {% if pacientes.has_next %}
+        <a href="?page={{ pacientes.next_page_number }}{% if rut_query %}&rut={{ rut_query }}{% endif %}" class="btn btn-secondary mx-1">Siguiente</a>
+    {% endif %}
+</div>
+
+<!-- Modal para Confirmar Eliminación -->
+<div class="modal fade" id="modalEliminarPaciente" tabindex="-1" aria-labelledby="modalEliminarPacienteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEliminarPacienteLabel">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar al paciente <strong id="nombrePaciente"></strong> con RUT <strong id="rutPaciente"></strong>?</p>
+                <p class="text-danger">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <form method="post" id="formEliminarPaciente">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Manejar los datos dinámicos del modal
+    const modalEliminarPaciente = document.getElementById('modalEliminarPaciente');
+    modalEliminarPaciente.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const pacienteId = button.getAttribute('data-id');
+        const pacienteNombre = button.getAttribute('data-nombre');
+        const pacienteRut = button.getAttribute('data-rut');
+
+        // Actualizar contenido del modal
+        document.getElementById('nombrePaciente').textContent = pacienteNombre;
+        document.getElementById('rutPaciente').textContent = pacienteRut;
+
+        // Actualizar acción del formulario
+        const form = document.getElementById('formEliminarPaciente');
+        form.action = "{% url 'eliminar_paciente' 0 %}".replace('0', pacienteId);
+    });
+</script>
+{% endblock %}
+

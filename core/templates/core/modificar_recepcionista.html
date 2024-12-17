@@ -1,0 +1,85 @@
+{% extends "core/base.html" %}
+{% block content %}
+<h1 class="text-center">Modificar Reserva</h1>
+<div class="container mt-4">
+    <!-- Mostrar notificaciones -->
+    {% if messages %}
+    <div class="alert alert-info">
+        {% for message in messages %}
+        {{ message }}
+        {% endfor %}
+    </div>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="card p-4">
+            <!-- Información del paciente -->
+            <div class="mb-3">
+                <label for="paciente" class="form-label">Paciente</label>
+                <input type="text" id="paciente" name="paciente" class="form-control" value="{{ reserva.paciente.nombre }}" readonly>
+            </div>
+
+            <!-- Selección de médico -->
+            <div class="mb-3">
+                <label for="medico" class="form-label">Médico</label>
+                <select id="medico" name="medico" class="form-select" required>
+                    <option value="">Seleccione un médico</option>
+                    {% for medico in medicos %}
+                    <option value="{{ medico.id }}" {% if medico.id == reserva.medico.id %}selected{% endif %}>
+                        {{ medico.user.first_name }} {{ medico.user.last_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Selección de hora disponible -->
+            <div class="mb-3">
+                <label for="hora_disponible" class="form-label">Hora Disponible</label>
+                <select id="hora_disponible" name="hora_disponible" class="form-select" required>
+                    <option value="">Seleccione una hora disponible</option>
+                </select>
+            </div>
+
+            <!-- Motivo de la reserva -->
+            <div class="mb-3">
+                <label for="motivo" class="form-label">Motivo</label>
+                <textarea id="motivo" name="motivo" class="form-control" rows="3">{{ reserva.motivo }}</textarea>
+            </div>
+
+            <button type="submit" class="btn btn-success w-100">Guardar Cambios</button>
+            <a href="{% url 'listar_reservas' %}" class="btn btn-secondary w-100 mt-2">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Cargar las horas disponibles del médico seleccionado
+    document.getElementById('medico').addEventListener('change', function () {
+        const medicoId = this.value;
+        const horaSelect = document.getElementById('hora_disponible');
+        horaSelect.innerHTML = '<option value="">Cargando horas disponibles...</option>';
+
+        if (medicoId) {
+            fetch(`/api/disponibilidades/?medico_id=${medicoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    horaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+                    data.forEach(hora => {
+                        const selected = hora.id === {{ reserva.fecha_reserva.id|default:0 }} ? 'selected' : '';
+                        horaSelect.innerHTML += `<option value="${hora.id}" ${selected}>${hora.fecha_hora}</option>`;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al cargar las horas disponibles:', error);
+                    horaSelect.innerHTML = '<option value="">Error al cargar horas disponibles</option>';
+                });
+        } else {
+            horaSelect.innerHTML = '<option value="">Seleccione un médico primero</option>';
+        }
+    });
+
+    // Disparar el cambio para cargar las horas del médico actual al cargar la página
+    document.getElementById('medico').dispatchEvent(new Event('change'));
+</script>
+{% endblock %}
+

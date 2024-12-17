@@ -1,0 +1,29 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<header class="usuarios">
+  <div class="container-fluid min-vh-100 d-flex justify-content-center align-items-center mt-0">
+    <form action="" method="post" class="w-100" style="max-width: 500px;">
+      {% csrf_token %}
+      <div class="card mx-auto">
+        <div class="card-body">
+          <h5 class="card-title">Ingrese sus Credenciales</h5>
+          {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+          {% endif %}
+          <div class="mb-3">
+            <label for="id_username" class="form-label">Nombre de Usuario</label>
+            <input type="text" name="username" id="id_username" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="id_password" class="form-label">Contraseña</label>
+            <input type="password" name="password" id="id_password" class="form-control" required>
+          </div>
+          <button class="btn btn-primary w-100 mt-3" type="submit">Iniciar Sesión</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</header>
+{% endblock %}
+
+

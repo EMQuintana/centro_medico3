@@ -1,0 +1,82 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<br><br><br>
+<h1 class="text-center mb-4">Modificar Reserva</h1>
+
+<div class="container">
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="paciente" class="form-label">Paciente</label>
+            <input type="text" id="paciente" class="form-control" value="{{ reserva.paciente.nombre }}" readonly>
+        </div>
+        <div class="mb-3">
+            <label for="motivo" class="form-label">Motivo</label>
+            <textarea id="motivo" name="motivo" class="form-control" rows="3" required>{{ reserva.motivo }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="medico" class="form-label">Médico</label>
+            <select id="fecha_reserva" name="fecha_reserva" class="form-select" required>
+                <option value="">Seleccione una hora disponible</option>
+                {% for disponibilidad in disponibilidades %}
+                <option value="{{ disponibilidad.id }}" {% if disponibilidad.id == reserva.fecha_reserva.id %}selected{% endif %}>
+                    {{ disponibilidad.fecha_disponible|date:"d/m/Y H:i" }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="fecha_reserva" class="form-label">Fecha y Hora</label>
+            <select id="fecha_reserva" name="fecha_reserva" class="form-select" required>
+                <option value="{{ reserva.fecha_reserva.id }}" selected>
+                    {{ reserva.fecha_reserva.fecha_disponible|date:"d/m/Y H:i" }}
+                </option>
+            </select>
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-success">Guardar Cambios</button>
+            <a href="{% url 'listar_reservas' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('medico').addEventListener('change', function () {
+        const medicoId = this.value; // Obtiene el ID del médico seleccionado
+        const fechaReservaSelect = document.getElementById('fecha_reserva'); // Select de fechas disponibles
+
+        // Muestra un mensaje mientras carga las fechas
+        fechaReservaSelect.innerHTML = '<option value="">Cargando horas disponibles...</option>';
+
+        if (medicoId) {
+            fetch(`/api/disponibilidades/?medico_id=${medicoId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta de la API');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    fechaReservaSelect.innerHTML = '<option value="">Seleccione una hora disponible</option>';
+                    if (data.length === 0) {
+                        fechaReservaSelect.innerHTML = '<option value="">No hay horas disponibles</option>';
+                    } else {
+                        data.forEach(disponibilidad => {
+                            fechaReservaSelect.innerHTML += `
+                                <option value="${disponibilidad.id}">
+                                    ${disponibilidad.fecha_hora}
+                                </option>
+                            `;
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al cargar las horas disponibles:', error);
+                    fechaReservaSelect.innerHTML = '<option value="">Error al cargar las horas</option>';
+                });
+        } else {
+            fechaReservaSelect.innerHTML = '<option value="">Seleccione un médico primero</option>';
+        }
+    });
+</script>
+{% endblock %}

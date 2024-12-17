@@ -1,0 +1,30 @@
+{% extends "core/base.html" %}
+{% block content %}
+<br><br>
+<h1 class="text-center">Modificar Paciente</h1>
+<form method="post">
+    {% csrf_token %}
+    <div class="card p-4">
+        <div class="mb-3">
+            <label for="nombre" class="form-label">Nombre</label>
+            <input type="text" id="nombre" name="nombre" class="form-control" value="{{ paciente.nombre }}">
+        </div>
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" id="email" name="email" class="form-control" value="{{ paciente.email }}">
+        </div>
+        <div class="mb-3">
+            <label for="telefono" class="form-label">Teléfono</label>
+            <input type="text" id="telefono" name="telefono" class="form-control" value="{{ paciente.telefono }}">
+        </div>
+        <div class="mb-3">
+            <label for="direccion" class="form-label">Dirección</label>
+            <textarea id="direccion" name="direccion" class="form-control">{{ paciente.direccion }}</textarea>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            <a href="{% url 'listar_pacientes' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </div>
+</form>
+{% endblock %}

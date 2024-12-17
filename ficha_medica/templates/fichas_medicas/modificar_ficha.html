@@ -1,0 +1,47 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">Modificar Ficha Médica</h1>
+
+    <!-- Información de la Ficha Médica -->
+    <form method="post">
+        {% csrf_token %}
+        <div class="card p-3 mb-4">
+            <h5>Información del Paciente</h5>
+            <p><strong>Nombre:</strong> {{ ficha.paciente.nombre }}</p>
+            <p><strong>RUT:</strong> {{ ficha.paciente.rut }}</p>
+            <p><strong>Edad:</strong> {{ ficha.paciente.edad }} años</p>
+        </div>
+
+        <div class="card p-3 mb-4">
+            <h5>Información del Médico</h5>
+            <p><strong>Nombre:</strong> {{ ficha.medico.user.first_name }} {{ ficha.medico.user.last_name }}</p>
+            <p><strong>RUT:</strong> {{ ficha.medico.user.username }}</p>
+            <p><strong>Especialidad:</strong> {{ ficha.medico.especialidad.nombre }}</p>
+        </div>
+
+        <!-- Campos del Formulario -->
+        <div class="mb-3">
+            <label for="diagnostico" class="form-label">Diagnóstico</label>
+            <textarea id="diagnostico" name="diagnostico" class="form-control" rows="4">{{ ficha.diagnostico }}</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="tratamiento" class="form-label">Tratamiento</label>
+            <textarea id="tratamiento" name="tratamiento" class="form-control" rows="4">{{ ficha.tratamiento }}</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="observaciones" class="form-label">Observaciones</label>
+            <textarea id="observaciones" name="observaciones" class="form-control" rows="4">{{ ficha.observaciones }}</textarea>
+        </div>
+
+        <!-- Botones -->
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            <a href="{% url 'listar_fichas_medicas' %}" class="btn btn-secondary">Cancelar</a>
+            <a href="{% url 'eliminar_ficha' ficha.id %}" class="btn btn-danger">Eliminar Ficha</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

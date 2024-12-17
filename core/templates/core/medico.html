@@ -1,0 +1,90 @@
+{% extends "core/base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <!-- Encabezado -->
+    <div class="text-center mb-5">
+        <h1 class="display-4 text-primary">Panel del Médico</h1>
+        <p class="lead text-secondary">Bienvenido, <strong>{{ user.first_name }} {{ user.last_name }}</strong></p>
+    </div>
+
+    <!-- Opciones principales -->
+    <div class="row justify-content-center gy-4">
+        <div class="col-md-4">
+            <div class="card shadow-lg border-primary">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary">📋 Buscar Fichas Médicas</h5>
+                    <p class="card-text">Consulta y administra las fichas médicas de tus pacientes.</p>
+                    <a href="{% url 'listar_fichas_medicas' %}" class="btn btn-primary btn-lg w-100">Ir</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-lg border-secondary">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-secondary">🕒 Gestionar Disponibilidad</h5>
+                    <p class="card-text">Organiza tus horarios y establece tu disponibilidad.</p>
+                    <a href="{% url 'gestionar_disponibilidades' %}" class="btn btn-secondary btn-lg w-100">Ir</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón de notificaciones -->
+    <div class="text-center mt-5">
+        <button 
+            class="btn btn-warning btn-lg px-5 py-3 shadow position-relative" 
+            id="notificaciones-reservas" 
+            data-bs-toggle="modal" 
+            data-bs-target="#modalReservas">
+            🔔 Reservas del Día
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                {% if reservas_hoy %}{{ reservas_hoy|length }}{% else %}0{% endif %}
+            </span>
+        </button>
+    </div>
+
+    <!-- Modal de Reservas -->
+    <div class="modal fade" id="modalReservas" tabindex="-1" aria-labelledby="modalReservasLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalReservasLabel">Reservas del Día</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    {% if reservas_hoy %}
+                        <ul class="list-group">
+                            {% for reserva in reservas_hoy %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    {% if reserva.fecha_reserva and reserva.paciente %}
+                                        <strong>Hora:</strong> {{ reserva.fecha_reserva.fecha_disponible|date:"H:i" }}<br>
+                                        <strong>Paciente:</strong> {{ reserva.paciente.nombre }}<br>
+                                        <strong>Motivo:</strong> {{ reserva.motivo }}
+                                    {% else %}
+                                        <p class="text-danger">Información incompleta para esta reserva</p>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    {% if reserva.id %}
+                                    <a href="{% url 'crear_ficha' reserva_id=reserva.id %}" 
+                                       class="btn btn-primary btn-sm shadow-sm">
+                                       Crear Ficha Médica
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-center text-muted">No hay reservas para hoy.</p>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

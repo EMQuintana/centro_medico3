@@ -1,0 +1,51 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">Crear Ficha Médica</h1>
+
+    <!-- Información del Médico -->
+    <div class="card p-3 mb-4">
+        <h5>Información del Médico</h5>
+        <p><strong>Nombre:</strong> {{ medico_nombre }}</p>
+        <p><strong>RUT:</strong> {{ rut_medico }}</p>
+        <p><strong>Especialidad:</strong> {{ especialidad }}</p>
+    </div>
+
+    <!-- Información del Paciente -->
+    <div class="card p-3 mb-4">
+        <h5>Información del Paciente</h5>
+        <p><strong>Nombre:</strong> {{ paciente.nombre }}</p>
+        <p><strong>RUT:</strong> {{ paciente.rut }}</p>
+        <p><strong>Edad:</strong> {{ edad }} años</p>
+        <p><strong>Fecha de la Reserva:</strong> {{ reserva.fecha_reserva.fecha_disponible|date:"d/m/Y H:i" }}</p>
+    </div>
+
+    <!-- Formulario para la Ficha Médica -->
+    <form method="post">
+        {% csrf_token %}
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                <ul>
+                    {% for field, errors in form.errors.items %}
+                        <li><strong>{{ field }}:</strong> {{ errors|join:", " }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        <div class="mb-3">
+            <label for="diagnostico" class="form-label">Diagnóstico</label>
+            {{ form.diagnostico }}
+        </div>
+        <div class="mb-3">
+            <label for="tratamiento" class="form-label">Tratamiento</label>
+            {{ form.tratamiento }}
+        </div>
+        <div class="mb-3">
+            <label for="observaciones" class="form-label">Observaciones</label>
+            {{ form.observaciones }}
+        </div>
+        <button type="submit" class="btn btn-success">Guardar Ficha Médica</button>
+        <a href="{% url 'medico_dashboard' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}
